@@ -1,12 +1,10 @@
-// Um banco de dados em memória super simples para armazenar pedidos até o Brendi buscar.
-// NOTA: Na Vercel (Serverless), a memória pode resetar. Para produção pesada, usaríamos Vercel KV (Redis).
-
 const globalAny = global as any;
 
 if (!globalAny.__db) {
   globalAny.__db = {
     orders: {} as Record<string, any>,
-    events: [] as any[]
+    events: [] as any[],
+    pendingAddresses: {} as Record<string, any>
   };
 }
 
@@ -14,8 +12,16 @@ export const db = globalAny.__db;
 
 export function addOrderEvent(orderData: any) {
   const orderId = orderData.id || `ORD-${Date.now()}`;
+  const offerName = orderData.data?.offer?.name || "";
   
-  // Salva o pedido completo para quando o Brendi pedir os detalhes
+  // Tenta resgatar o endereço salvo na memória pelo checkout
+  const address = db.pendingAddresses[offerName] || {
+    street: "Não informado",
+    number: "S/N",
+    neighborhood: "Não informado"
+  };
+  
+  // Salva o pedido completo para quando o Brendi (ou nosso painel) pedir os detalhes
   db.orders[orderId] = {
     id: orderId,
     type: "DELIVERY",
@@ -33,6 +39,7 @@ export function addOrderEvent(orderData: any) {
       documentNumber: "00000000000",
       name: orderData.data?.customer?.name || "Cliente Cakto",
     },
+    deliveryAddress: address,
     items: [
       {
         id: "item-1",

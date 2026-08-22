@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { db } from '@/lib/db';
 
 const CAKTO_API = 'https://api.cakto.com.br/public_api';
 
@@ -77,23 +78,34 @@ async function createOffer(token: string, productId: string, name: string, price
 // ─── HANDLER PRINCIPAL ────────────────────────────────────────────────────────
 export async function POST(request: Request) {
   try {
-    const { items, total } = await request.json();
+    const { items, total, address } = await request.json();
 
     if (!items?.length) {
       return NextResponse.json({ error: 'Carrinho vazio' }, { status: 400 });
     }
 
+    // Criamos um nome único para a oferta, assim conseguimos linkar com o webhook depois!
+    const uniqueHash = Math.floor(Math.random() * 100000);
     const itemsDescription = items.map((i: any) => `${i.quantity}x ${i.title}`).join(', ');
+    const offerName = `Pedido Kikis Burguer — ${itemsDescription} #${uniqueHash}`;
 
     try {
       const token      = await getCaktoToken();
       const productId  = await getProductId(token);
+      
+      // Salva o endereço temporariamente em memória! 
+      if (address) {
+        db.pendingAddresses[offerName] = address;
+        console.log(`[Address] Endereço salvo na memória para a oferta: ${offerName}`);
+      }
+
       const checkoutUrl = await createOffer(
         token,
         productId,
-        `Pedido Kikis Burguer — ${itemsDescription}`,
+        offerName,
         parseFloat(total.toFixed(2))
       );
+      
       return NextResponse.json({ checkoutUrl });
 
     } catch (apiErr: any) {

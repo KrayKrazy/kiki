@@ -123,9 +123,15 @@ function ProductCard({ product, onAdd, delay = 0 }: { product: Product; onAdd: (
 // ─── CART ─────────────────────────────────────────────────────────────────────
 function Cart({ items, onClose, onUpdateQty, onRemove, onCheckout, loading }: {
   items: CartItem[]; onClose: () => void; onUpdateQty: (id: string, qty: number) => void;
-  onRemove: (id: string) => void; onCheckout: () => void; loading: boolean;
+  onRemove: (id: string) => void; onCheckout: (address: { street: string, number: string, neighborhood: string }) => void; loading: boolean;
 }) {
+  const [street, setStreet] = useState('');
+  const [number, setNumber] = useState('');
+  const [neighborhood, setNeighborhood] = useState('');
+  
   const total = items.reduce((acc, i) => acc + i.price * i.quantity, 0);
+  const isValidAddress = street.trim() !== '' && number.trim() !== '' && neighborhood.trim() !== '';
+
   return (
     <div className="fixed inset-0 z-50 flex justify-end" data-section="cart">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={onClose} />
@@ -169,6 +175,18 @@ function Cart({ items, onClose, onUpdateQty, onRemove, onCheckout, loading }: {
                   </div>
                 </div>
               ))}
+              
+              {/* Endereço */}
+              <div className="mt-6 border-t border-stone-200 pt-6">
+                <h3 className="font-bold text-stone-800 mb-3 text-sm uppercase tracking-wider">Endereço de Entrega</h3>
+                <div className="space-y-3">
+                  <input type="text" placeholder="Rua" value={street} onChange={e => setStreet(e.target.value)} className="w-full border border-stone-300 rounded-lg p-3 text-sm focus:outline-none focus:border-[var(--burgundy)] text-stone-800" />
+                  <div className="flex gap-3">
+                    <input type="text" placeholder="Número" value={number} onChange={e => setNumber(e.target.value)} className="w-1/3 border border-stone-300 rounded-lg p-3 text-sm focus:outline-none focus:border-[var(--burgundy)] text-stone-800" />
+                    <input type="text" placeholder="Bairro" value={neighborhood} onChange={e => setNeighborhood(e.target.value)} className="w-2/3 border border-stone-300 rounded-lg p-3 text-sm focus:outline-none focus:border-[var(--burgundy)] text-stone-800" />
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Resumo */}
@@ -183,12 +201,12 @@ function Cart({ items, onClose, onUpdateQty, onRemove, onCheckout, loading }: {
                 <span className="font-serif font-bold text-2xl text-[var(--burgundy)]">R$ {total.toFixed(2).replace('.', ',')}</span>
               </div>
               <button
-                onClick={onCheckout}
-                disabled={loading}
-                className="w-full bg-[var(--burgundy)] text-white py-4 rounded-2xl font-bold text-base hover:bg-[var(--burgundy-light)] transition-colors shadow-lg flex items-center justify-center gap-3"
+                onClick={() => onCheckout({ street, number, neighborhood })}
+                disabled={loading || !isValidAddress}
+                className={`w-full py-4 rounded-2xl font-bold text-base transition-colors shadow-lg flex items-center justify-center gap-3 ${isValidAddress ? 'bg-[var(--burgundy)] text-white hover:bg-[var(--burgundy-light)]' : 'bg-stone-300 text-stone-500 cursor-not-allowed'}`}
                 data-action="initiate-checkout" data-total={total}
               >
-                {loading ? <><div className="spinner" /><span>Aguarde...</span></> : <span>Finalizar Pedido →</span>}
+                {loading ? <><div className="spinner border-white" /><span>Aguarde...</span></> : <span>{!isValidAddress ? 'Preencha o Endereço' : 'Ir para o Pagamento →'}</span>}
               </button>
               <div className="flex items-center justify-center gap-2 text-xs text-stone-400">
                 <span>🔒</span>
@@ -233,7 +251,7 @@ export default function Home() {
 
   const removeItem = useCallback((id: string) => { setCart(prev => prev.filter(i => i.id !== id)); }, []);
 
-  const handleCheckout = useCallback(async () => {
+  const handleCheckout = useCallback(async (address: { street: string, number: string, neighborhood: string }) => {
     const total = cart.reduce((acc, i) => acc + i.price * i.quantity, 0);
     trackInitiateCheckout(cart, total);
     setLoading(true);
@@ -241,7 +259,7 @@ export default function Home() {
       const res = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: cart, total })
+        body: JSON.stringify({ items: cart, total, address })
       });
       const data = await res.json();
       if (data.checkoutUrl) {
