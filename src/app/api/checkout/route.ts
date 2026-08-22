@@ -2,12 +2,11 @@ import { NextResponse } from 'next/server';
 
 const CAKTO_API = 'https://api.cakto.com.br/public_api';
 
-// Credenciais OAuth2 — devem ser criadas em: app.cakto.com.br/dashboard/cakto-api
-// (diferente das chaves de webhook)
-const CAKTO_CLIENT_ID     = process.env.CAKTO_CLIENT_ID     || process.env.CAKTO_LOGIN       || '';
-const CAKTO_CLIENT_SECRET = process.env.CAKTO_CLIENT_SECRET || process.env.CAKTO_SECRET_KEY  || '';
+// Credenciais OAuth2 criadas em: app.cakto.com.br/dashboard/cakto-api
+const CAKTO_CLIENT_ID     = process.env.CAKTO_CLIENT_ID     || 'Ml0WcZX2n4ChxDueDPI0OsDwB2kk2UBxAatXrdpQ';
+const CAKTO_CLIENT_SECRET = process.env.CAKTO_CLIENT_SECRET || 'VRMenW45jwcWYg2r1RY5hEGsgidGnNDBb7nSuFnZq5TKMd3RXTRV2DxyOenkFwcDlMtqubAYRWibAXESatpoT8r79UhYuW1H648YfliMyqMqayO6dApSJKHQEFiP1Aku';
 
-// Link fixo de fallback (gerado no painel Cakto)
+// Link fixo de fallback
 const CAKTO_FALLBACK_URL = process.env.CAKTO_FALLBACK_URL || 'https://pay.cakto.com.br/386o2zi_1056408';
 
 // ─── PASSO 1: Obter access_token ─────────────────────────────────────────────
