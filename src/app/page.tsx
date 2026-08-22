@@ -234,10 +234,31 @@ export default function Home() {
 
   const removeItem = useCallback((id: string) => { setCart(prev => prev.filter(i => i.id !== id)); }, []);
 
-  const handleCheckout = useCallback(() => {
-    // Salva o carrinho e redireciona para a tela de endereço
-    localStorage.setItem('kiki_cart', JSON.stringify(cart));
-    window.location.href = '/endereco';
+  const handleCheckout = useCallback(async () => {
+    const total = cart.reduce((acc, i) => acc + i.price * i.quantity, 0);
+    trackInitiateCheckout(cart, total);
+    setLoading(true);
+    try {
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: cart, total })
+      });
+      const data = await res.json();
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+      } else {
+        console.error('Cakto checkout error:', data);
+        setToast(data.error || 'Erro ao gerar link de pagamento.');
+        setTimeout(() => setToast(''), 5000);
+      }
+    } catch (err: any) {
+      console.error('Fetch error:', err);
+      setToast(`Erro de conexão: ${err.message}`);
+      setTimeout(() => setToast(''), 5000);
+    } finally {
+      setLoading(false);
+    }
   }, [cart]);
 
   return (

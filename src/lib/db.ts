@@ -12,13 +12,15 @@ export const db = globalAny.__db;
 
 export function addOrderEvent(orderData: any) {
   const orderId = orderData.id || `ORD-${Date.now()}`;
-  const offerName = orderData.data?.offer?.name || "";
   
-  // Tenta resgatar o endereço salvo na memória pelo checkout
-  const address = db.pendingAddresses[offerName] || {
-    street: "Não informado",
-    number: "S/N",
-    neighborhood: "Não informado"
+  // Extrai o endereço vindo direto do webhook da Cakto (Produto Físico)
+  const customerInfo = orderData.data?.customer || {};
+  const shippingInfo = orderData.data?.shipping || orderData.data?.address || {};
+  
+  const address = {
+    street: shippingInfo.street || shippingInfo.address || customerInfo.address || "Endereço não informado",
+    number: shippingInfo.number || "S/N",
+    neighborhood: shippingInfo.neighborhood || shippingInfo.district || "Bairro não informado"
   };
   
   // Salva o pedido completo para quando o Brendi (ou nosso painel) pedir os detalhes
