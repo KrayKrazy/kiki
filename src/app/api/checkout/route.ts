@@ -4,6 +4,9 @@ const CAKTO_API = 'https://api.cakto.com.br/public_api';
 const CAKTO_CLIENT_ID     = process.env.CAKTO_LOGIN       || 'vH18q1Qm2DscUVDu9UF029ksnx5MCmL2zjft26Tk';
 const CAKTO_CLIENT_SECRET = process.env.CAKTO_SECRET_KEY  || 'LdDE2Gu9f2KSNcWsN7J0uy8RPwgblNI80eJyFHgm8jvkC6Bu3otIy77yx37HaRRMIx9uerRxAoAZg0UrS547iM5enlqmeMCGpANV5Qnhc7gxuvb2arocyqe8RUYhiodZ';
 
+// Link de pagamento fixo criado no painel da Cakto — usado como fallback
+const CAKTO_FALLBACK_URL = process.env.CAKTO_FALLBACK_URL || 'https://pay.cakto.com.br/386o2zi_1056408';
+
 // ─── PASSO 1: Obter access_token via OAuth2 ────────────────────────────────
 async function getCaktoToken(): Promise<string> {
   // Tenta endpoint /public_api/token/ primeiro, depois /oauth/token como fallback
@@ -111,16 +114,21 @@ export async function POST(request: Request) {
       .join(', ');
 
     // Executa o fluxo completo: token → produto → oferta → link
-    const token      = await getCaktoToken();
-    const productId  = await getFirstProductId(token);
-    const checkoutUrl = await createOffer(
-      token,
-      productId,
-      `Pedido Kikis Burguer — ${itemsDescription}`,
-      parseFloat(total.toFixed(2))
-    );
-
-    return NextResponse.json({ checkoutUrl });
+    try {
+      const token       = await getCaktoToken();
+      const productId   = await getFirstProductId(token);
+      const checkoutUrl = await createOffer(
+        token,
+        productId,
+        `Pedido Kikis Burguer — ${itemsDescription}`,
+        parseFloat(total.toFixed(2))
+      );
+      return NextResponse.json({ checkoutUrl });
+    } catch (apiError: any) {
+      // Se a API falhar, usa o link fixo como fallback seguro
+      console.warn('[Cakto] API dinâmica falhou, usando link fixo:', apiError.message);
+      return NextResponse.json({ checkoutUrl: CAKTO_FALLBACK_URL });
+    }
 
   } catch (error: any) {
     console.error('[Cakto] Erro no checkout:', error.message);
