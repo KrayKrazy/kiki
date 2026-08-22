@@ -309,23 +309,23 @@ export default function Home() {
       {/* ── HERO ── */}
       <section className="relative h-[90vh] flex items-center justify-center overflow-hidden noise-overlay" data-section="hero">
         <div ref={heroBgRef} className="hero-bg absolute inset-0 scale-110">
-          <img src="/images/imgi_32_683623199_1495267098850141_5860433048599750493_n.jpg" alt="Hero" className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-b from-[var(--burgundy-dark)]/70 via-[var(--burgundy)]/50 to-[var(--burgundy-dark)]/90" />
+          <img src="/images/premium_hero.jpg" alt="Premium Hero" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[var(--burgundy-dark)]/80 via-[var(--burgundy-dark)]/60 to-[var(--burgundy-dark)]/95" />
         </div>
-        <div className="relative z-10 text-center px-4 max-w-5xl mx-auto">
-          <p className="reveal text-[var(--gold)] text-xs tracking-[0.4em] font-semibold uppercase mb-6">Hambúrgueria Artesanal</p>
-          <h2 className="reveal delay-100 font-serif text-6xl md:text-8xl text-white font-black mb-6 leading-tight drop-shadow-2xl">
+        <div className="relative z-10 text-center px-6 max-w-5xl mx-auto w-full mt-10 md:mt-0">
+          <p className="reveal text-[var(--gold)] text-xs md:text-sm tracking-[0.4em] font-semibold uppercase mb-4 md:mb-6">Hambúrgueria Artesanal</p>
+          <h2 className="reveal delay-100 font-serif text-5xl md:text-8xl text-white font-black mb-4 md:mb-6 leading-tight drop-shadow-2xl">
             A VERDADEIRA<br />
-            <span className="gold-shimmer">EXPERIÊNCIA</span>
+            <span className="gold-shimmer text-4xl md:text-8xl block mt-2 md:mt-0">EXPERIÊNCIA</span>
           </h2>
-          <p className="reveal delay-200 text-stone-300 text-lg md:text-xl max-w-xl mx-auto mb-10 font-light leading-relaxed">
-            Ingredientes selecionados, preparo artesanal e entrega direto para você.
+          <p className="reveal delay-200 text-stone-300 text-base md:text-xl max-w-xl mx-auto mb-8 md:mb-10 font-light leading-relaxed px-4">
+            Ingredientes selecionados, preparo artesanal e entrega rápido para você.
           </p>
-          <div className="reveal delay-300 flex flex-col sm:flex-row gap-4 justify-center">
-            <a href="#cardapio" className="btn-primary inline-block bg-[var(--gold)] text-[var(--burgundy-dark)] font-bold px-10 py-4 rounded-full text-base shadow-[0_0_30px_rgba(201,168,76,0.4)]" data-action="hero-cta-menu">
+          <div className="reveal delay-300 flex flex-col sm:flex-row gap-4 justify-center px-4 w-full">
+            <a href="#cardapio" className="btn-primary w-full sm:w-auto bg-[var(--gold)] text-[var(--burgundy-dark)] font-bold px-10 py-4 rounded-full text-base shadow-[0_0_30px_rgba(201,168,76,0.4)]" data-action="hero-cta-menu">
               <span>Ver Cardápio</span>
             </a>
-            <button onClick={() => setCartOpen(true)} className="btn-primary inline-block border border-white/30 text-white font-semibold px-10 py-4 rounded-full text-base hover:border-[var(--gold)]" data-action="hero-cta-cart">
+            <button onClick={() => setCartOpen(true)} className="btn-primary w-full sm:w-auto border border-white/30 text-white font-semibold px-10 py-4 rounded-full text-base hover:border-[var(--gold)]" data-action="hero-cta-cart">
               <span>Meu Pedido {totalItems > 0 && `(${totalItems})`}</span>
             </button>
           </div>
