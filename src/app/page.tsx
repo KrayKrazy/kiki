@@ -247,12 +247,18 @@ export default function Home() {
       if (data.checkoutUrl) {
         window.location.href = data.checkoutUrl;
       } else {
-        setToast('Erro ao gerar link de pagamento. Tente novamente.');
-        setTimeout(() => setToast(''), 3000);
+        // Mostra diagnóstico detalhado no console e na tela para investigação
+        console.error('Cakto checkout error:', data);
+        const msg = data.debug
+          ? `Cakto API falhou. Verifique o console para diagnóstico.`
+          : (data.error || 'Erro ao gerar link de pagamento.');
+        setToast(msg);
+        setTimeout(() => setToast(''), 5000);
       }
-    } catch {
-      setToast('Erro de conexão. Tente novamente.');
-      setTimeout(() => setToast(''), 3000);
+    } catch (err: any) {
+      console.error('Fetch error:', err);
+      setToast(`Erro de conexão: ${err.message}`);
+      setTimeout(() => setToast(''), 5000);
     } finally {
       setLoading(false);
     }
