@@ -110,7 +110,7 @@ export default function Home() {
           </div>
           <div className="text-center md:text-right">
             <p className="text-sm">© 2026 Kikis Burguer. Todos os direitos reservados.</p>
-            <p className="text-xs mt-1 text-stone-500">Desenvolvido com integração Shopify & Brendi</p>
+            <p className="text-xs mt-1 text-stone-500">Desenvolvido com integração Cakto & Brendi</p>
           </div>
         </div>
       </footer>

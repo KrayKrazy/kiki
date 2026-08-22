@@ -30,7 +30,7 @@ export async function sendOrderToBrendi(orderData: any) {
         total_amount: parseFloat(orderData.total_price),
         status: 'PAID'
       },
-      notes: orderData.note || 'Pedido feito via Shopify'
+      notes: orderData.note || 'Pedido feito via Cakto'
     };
 
     console.log('Pedido para o Brendi:', JSON.stringify(payload, null, 2));
