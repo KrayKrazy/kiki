@@ -186,10 +186,10 @@ function Cart({ items, onClose, onUpdateQty, onRemove, onCheckout, loading }: {
               <button
                 onClick={onCheckout}
                 disabled={loading}
-                className="w-full py-4 rounded-2xl font-bold text-base transition-colors shadow-lg flex items-center justify-center gap-3 bg-[var(--burgundy)] text-white hover:bg-[var(--burgundy-light)]"
+                className="w-full py-4 rounded-2xl font-bold text-base transition-colors shadow-lg flex items-center justify-center gap-3 bg-[var(--burgundy)] text-white hover:bg-[var(--burgundy-light)] disabled:opacity-70 disabled:cursor-wait"
                 data-action="initiate-checkout" data-total={total}
               >
-                <span>Avançar para Entrega →</span>
+                <span>{loading ? 'Preparando link seguro...' : 'Avançar para o Pedido →'}</span>
               </button>
               <div className="flex items-center justify-center gap-2 text-xs text-stone-400">
                 <span>🔒</span>
