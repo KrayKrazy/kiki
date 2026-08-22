@@ -1,122 +1,94 @@
 import { NextResponse } from 'next/server';
 
 const CAKTO_API = 'https://api.cakto.com.br/public_api';
-const CAKTO_CLIENT_ID     = process.env.CAKTO_LOGIN       || 'vH18q1Qm2DscUVDu9UF029ksnx5MCmL2zjft26Tk';
-const CAKTO_CLIENT_SECRET = process.env.CAKTO_SECRET_KEY  || 'LdDE2Gu9f2KSNcWsN7J0uy8RPwgblNI80eJyFHgm8jvkC6Bu3otIy77yx37HaRRMIx9uerRxAoAZg0UrS547iM5enlqmeMCGpANV5Qnhc7gxuvb2arocyqe8RUYhiodZ';
 
-// Link de pagamento fixo criado no painel da Cakto — usado como fallback
+// Credenciais OAuth2 — devem ser criadas em: app.cakto.com.br/dashboard/cakto-api
+// (diferente das chaves de webhook)
+const CAKTO_CLIENT_ID     = process.env.CAKTO_CLIENT_ID     || process.env.CAKTO_LOGIN       || '';
+const CAKTO_CLIENT_SECRET = process.env.CAKTO_CLIENT_SECRET || process.env.CAKTO_SECRET_KEY  || '';
+
+// Link fixo de fallback (gerado no painel Cakto)
 const CAKTO_FALLBACK_URL = process.env.CAKTO_FALLBACK_URL || 'https://pay.cakto.com.br/386o2zi_1056408';
 
-// ─── PASSO 1: Obter access_token via OAuth2 ────────────────────────────────
+// ─── PASSO 1: Obter access_token ─────────────────────────────────────────────
+// Ref: https://docs.cakto.com.br/authentication
+// ATENÇÃO: A Cakto NÃO usa grant_type — apenas client_id + client_secret
 async function getCaktoToken(): Promise<string> {
-  // Tenta endpoint /public_api/token/ primeiro, depois /oauth/token como fallback
-  const tokenUrls = [
-    `${CAKTO_API}/token/`,
-    'https://api.cakto.com.br/oauth/token',
-    'https://api.cakto.com.br/oauth2/token',
-  ];
+  const res = await fetch(`${CAKTO_API}/token/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id:     CAKTO_CLIENT_ID,
+      client_secret: CAKTO_CLIENT_SECRET,
+    }).toString(),
+  });
 
-  for (const url of tokenUrls) {
-    try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          grant_type:    'client_credentials',
-          client_id:     CAKTO_CLIENT_ID,
-          client_secret: CAKTO_CLIENT_SECRET,
-        }),
-      });
+  const text = await res.text();
+  console.log(`[Cakto Token] ${res.status}:`, text.substring(0, 300));
 
-      if (res.ok) {
-        const data = await res.json();
-        console.log(`[Cakto] Token obtido via ${url}`);
-        return data.access_token;
-      }
-
-      const errText = await res.text();
-      console.warn(`[Cakto] Token endpoint ${url} retornou ${res.status}: ${errText.substring(0, 200)}`);
-    } catch (e: any) {
-      console.warn(`[Cakto] Falha em ${url}: ${e.message}`);
-    }
+  if (!res.ok) {
+    throw new Error(`Token Cakto falhou (${res.status}): ${text.substring(0, 200)}`);
   }
 
-  throw new Error('Não foi possível obter token da Cakto. Verifique client_id e client_secret.');
+  const data = JSON.parse(text);
+  console.log(`[Cakto Token] OK — expira em ${data.expires_in}s, escopos: ${data.scope}`);
+  return data.access_token;
 }
 
-// ─── PASSO 2: Listar produtos e pegar o primeiro ID ───────────────────────
-async function getFirstProductId(token: string): Promise<string> {
-  // Se tiver um PRODUCT_ID específico configurado, usa ele
-  if (process.env.CAKTO_PRODUCT_ID) {
-    return process.env.CAKTO_PRODUCT_ID;
-  }
+// ─── PASSO 2: Buscar ID do produto ───────────────────────────────────────────
+async function getProductId(token: string): Promise<string> {
+  // Usa o product ID fixo se configurado na variável de ambiente
+  if (process.env.CAKTO_PRODUCT_ID) return process.env.CAKTO_PRODUCT_ID;
 
   const res = await fetch(`${CAKTO_API}/products/`, {
-    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    headers: { 'Authorization': `Bearer ${token}` },
   });
 
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Erro ao listar produtos Cakto (${res.status}): ${err.substring(0, 200)}`);
-  }
+  const text = await res.text();
+  if (!res.ok) throw new Error(`Produtos Cakto falhou (${res.status}): ${text.substring(0, 200)}`);
 
-  const data = await res.json();
-  // A API pode retornar array ou objeto com { results: [] }
-  const products = Array.isArray(data) ? data : (data.results || []);
+  const data = JSON.parse(text);
+  const list = Array.isArray(data) ? data : (data.results || []);
 
-  if (products.length === 0) {
-    throw new Error('Nenhum produto encontrado na conta Cakto. Crie um produto no painel primeiro.');
-  }
+  if (!list.length) throw new Error('Nenhum produto encontrado na conta Cakto.');
 
-  console.log(`[Cakto] ${products.length} produto(s) encontrado(s). Usando: ${products[0].id} — ${products[0].name}`);
-  return products[0].id;
+  console.log(`[Cakto Products] ${list.length} produto(s). Usando: ${list[0].id} — ${list[0].name}`);
+  return list[0].id;
 }
 
-// ─── PASSO 3: Criar oferta e retornar link ─────────────────────────────────
-async function createOffer(token: string, productId: string, name: string, price: number) {
+// ─── PASSO 3: Criar oferta dinâmica ──────────────────────────────────────────
+async function createOffer(token: string, productId: string, name: string, price: number): Promise<string> {
+  const body = { name, price, product: productId, status: 'active', type: 'unique' };
+
   const res = await fetch(`${CAKTO_API}/offers/`, {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      name,
-      price,          // Reais (ex: 35.90) — NÃO centavos
-      product: productId,
-      status: 'active',
-      type: 'unique',
-    }),
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
   });
 
-  const responseText = await res.text();
-  console.log(`[Cakto] Criar oferta → ${res.status}: ${responseText.substring(0, 300)}`);
+  const text = await res.text();
+  console.log(`[Cakto Offer] ${res.status}:`, text.substring(0, 300));
 
-  if (!res.ok) {
-    throw new Error(`Erro ao criar oferta Cakto (${res.status}): ${responseText.substring(0, 300)}`);
-  }
+  if (!res.ok) throw new Error(`Oferta Cakto falhou (${res.status}): ${text.substring(0, 200)}`);
 
-  const data = JSON.parse(responseText);
+  const data = JSON.parse(text);
   return `https://pay.cakto.com.br/${data.id}`;
 }
 
-// ─── HANDLER ──────────────────────────────────────────────────────────────
+// ─── HANDLER PRINCIPAL ────────────────────────────────────────────────────────
 export async function POST(request: Request) {
   try {
     const { items, total } = await request.json();
 
-    if (!items || items.length === 0) {
+    if (!items?.length) {
       return NextResponse.json({ error: 'Carrinho vazio' }, { status: 400 });
     }
 
-    const itemsDescription = items
-      .map((i: any) => `${i.quantity}x ${i.title}`)
-      .join(', ');
+    const itemsDescription = items.map((i: any) => `${i.quantity}x ${i.title}`).join(', ');
 
-    // Executa o fluxo completo: token → produto → oferta → link
     try {
-      const token       = await getCaktoToken();
-      const productId   = await getFirstProductId(token);
+      const token      = await getCaktoToken();
+      const productId  = await getProductId(token);
       const checkoutUrl = await createOffer(
         token,
         productId,
@@ -124,17 +96,15 @@ export async function POST(request: Request) {
         parseFloat(total.toFixed(2))
       );
       return NextResponse.json({ checkoutUrl });
-    } catch (apiError: any) {
-      // Se a API falhar, usa o link fixo como fallback seguro
-      console.warn('[Cakto] API dinâmica falhou, usando link fixo:', apiError.message);
+
+    } catch (apiErr: any) {
+      // Fallback: se API falhar, usa link fixo
+      console.warn('[Cakto] Usando fallback:', apiErr.message);
       return NextResponse.json({ checkoutUrl: CAKTO_FALLBACK_URL });
     }
 
-  } catch (error: any) {
-    console.error('[Cakto] Erro no checkout:', error.message);
-    return NextResponse.json(
-      { error: error.message || 'Erro ao gerar link de pagamento' },
-      { status: 502 }
-    );
+  } catch (err: any) {
+    console.error('[Cakto] Erro geral:', err.message);
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
