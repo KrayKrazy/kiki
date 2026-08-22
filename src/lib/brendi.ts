@@ -5,31 +5,34 @@ const BRENDI_API_TOKEN = process.env.BRENDI_API_TOKEN || '231f8979cda81f3096089d
 export async function sendOrderToBrendi(orderData: any) {
   try {
     const payload = {
-      external_id: String(orderData.id || orderData.transaction_id || ''),
+      external_id: String(orderData.data?.id || orderData.id || ''),
       customer: {
-        name: `${orderData.customer?.first_name || ''} ${orderData.customer?.last_name || ''}`.trim(),
-        phone: orderData.customer?.phone || '',
-        email: orderData.customer?.email || ''
+        name: orderData.data?.customer?.name || '',
+        phone: orderData.data?.customer?.phone || '',
+        email: orderData.data?.customer?.email || ''
       },
       delivery_address: {
-        street: orderData.shipping_address?.address1 || '',
-        number: orderData.shipping_address?.address2 || 'S/N',
-        city: orderData.shipping_address?.city || '',
-        state: orderData.shipping_address?.province_code || '',
-        zipcode: orderData.shipping_address?.zip || ''
+        street: orderData.data?.shipping?.street || orderData.data?.address?.street || '',
+        number: orderData.data?.shipping?.number || orderData.data?.address?.number || 'S/N',
+        city: orderData.data?.shipping?.city || orderData.data?.address?.city || '',
+        state: orderData.data?.shipping?.state || orderData.data?.address?.state || '',
+        zipcode: orderData.data?.shipping?.zipcode || orderData.data?.address?.zipcode || ''
       },
-      items: (orderData.line_items || []).map((item: any) => ({
-        external_id: String(item.product_id || ''),
-        name: item.name,
-        quantity: item.quantity,
-        price: parseFloat(item.price)
-      })),
+      // Como o Cakto agrupa tudo no nome da oferta, enviamos como 1 item genérico contendo a descrição completa
+      items: [
+        {
+          external_id: String(orderData.data?.offer?.id || 'cakto-item'),
+          name: orderData.data?.offer?.name || 'Pedido Kikis Burguer',
+          quantity: 1,
+          price: parseFloat(orderData.data?.amount || '0')
+        }
+      ],
       payment: {
-        method: 'ONLINE',
-        total_amount: parseFloat(orderData.total_price || '0'),
-        status: 'PAID'
+        method: orderData.data?.paymentMethodName === 'Pix' ? 'PIX' : 'ONLINE',
+        total_amount: parseFloat(orderData.data?.amount || '0'),
+        status: orderData.status === 'paid' || orderData.event === 'purchase_approved' ? 'PAID' : 'PENDING'
       },
-      notes: orderData.note || 'Pedido feito via Cakto'
+      notes: 'Pedido recebido via Cakto Webhook'
     };
 
     console.log('Enviando pedido ao Brendi:', JSON.stringify(payload, null, 2));
