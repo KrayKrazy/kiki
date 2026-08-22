@@ -7,11 +7,11 @@ export async function POST(request: Request) {
     const ackEvents = await request.json();
 
     if (Array.isArray(ackEvents)) {
-      const ackIds = ackEvents.map(e => e.eventId || e.id);
+      const ackIds = ackEvents.map((e: any) => e.eventId || e.id);
       
       // Remove os eventos confirmados da fila para não enviar novamente
       const initialLength = db.events.length;
-      db.events = db.events.filter(event => !ackIds.includes(event.eventId));
+      db.events = db.events.filter((event: any) => !ackIds.includes(event.eventId));
       
       console.log(`[Open Delivery] Brendi confirmou recebimento de ${initialLength - db.events.length} evento(s).`);
     }
