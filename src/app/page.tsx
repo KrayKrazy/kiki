@@ -270,7 +270,7 @@ export default function Home() {
 
       {/* Toast */}
       {toast && (
-        <div className="notification-toast fixed top-5 right-5 z-[60] bg-stone-900 text-white px-5 py-3 rounded-2xl shadow-2xl text-sm font-medium flex items-center gap-2 max-w-xs">
+        <div className="notification-toast fixed top-5 left-5 z-[60] bg-stone-900 text-white px-5 py-3 rounded-2xl shadow-2xl text-sm font-medium flex items-center gap-2 max-w-xs">
           <span className="text-[var(--gold)]">✓</span> {toast}
         </div>
       )}
