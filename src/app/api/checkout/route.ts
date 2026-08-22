@@ -37,23 +37,8 @@ async function getCaktoToken(): Promise<string> {
 
 // ─── PASSO 2: Buscar ID do produto ───────────────────────────────────────────
 async function getProductId(token: string): Promise<string> {
-  // Usa o product ID fixo se configurado na variável de ambiente
-  if (process.env.CAKTO_PRODUCT_ID) return process.env.CAKTO_PRODUCT_ID;
-
-  const res = await fetch(`${CAKTO_API}/products/`, {
-    headers: { 'Authorization': `Bearer ${token}` },
-  });
-
-  const text = await res.text();
-  if (!res.ok) throw new Error(`Produtos Cakto falhou (${res.status}): ${text.substring(0, 200)}`);
-
-  const data = JSON.parse(text);
-  const list = Array.isArray(data) ? data : (data.results || []);
-
-  if (!list.length) throw new Error('Nenhum produto encontrado na conta Cakto.');
-
-  console.log(`[Cakto Products] ${list.length} produto(s). Usando: ${list[0].id} — ${list[0].name}`);
-  return list[0].id;
+  // Fixado para o ID do produto "Pedido Kikis Burguer" para evitar conflitos com a Kelevra
+  return 'cfa2524f-0db0-4d20-b339-b10ed1a42ad8';
 }
 
 // ─── PASSO 3: Criar oferta dinâmica ──────────────────────────────────────────
