@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { sendOrderToBrendi } from '@/lib/brendi';
+import { addOrderEvent } from '@/lib/db';
 
 // Esta rota receberá os POSTs (Webhooks) do Cakto sempre que um pagamento for aprovado
 export async function POST(request: Request) {
@@ -10,20 +10,19 @@ export async function POST(request: Request) {
     console.log('Webhook recebido do Cakto! Pedido ID:', orderData.id || orderData.data?.id);
 
     try {
-      // Tentar enviar o pedido para o Brendi
-      const brendiResponse = await sendOrderToBrendi(orderData);
+      // Salva o pedido no DB em memória (Padrão Open Delivery)
+      // O Brendi (POS) vai fazer o polling na nossa API /v1/events/polling para baixar o pedido
+      addOrderEvent(orderData);
       
       return NextResponse.json(
-        { message: 'Sucesso', data: brendiResponse },
+        { message: 'Sucesso. Pedido salvo na fila para a Brendi.' },
         { status: 200 }
       );
-    } catch (brendiError: any) {
-      // Se o Brendi falhar, não devolve erro 500 para a Cakto
-      // A Cakto precisa de um status 200 OK para salvar e validar o webhook.
-      console.error('Erro ao comunicar com a API do Brendi:', brendiError.message);
+    } catch (dbError: any) {
+      console.error('Erro ao salvar no DB Open Delivery:', dbError.message);
       
       return NextResponse.json(
-        { message: 'Webhook recebido, mas falha ao enviar pro Brendi', error: brendiError.message },
+        { message: 'Webhook recebido, mas falha interna ao salvar', error: dbError.message },
         { status: 200 }
       );
     }
